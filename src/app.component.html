@@ -1,0 +1,186 @@
+<!-- Background Canvas - The Jarvis Core 
+     Changed to z-0 and bg-black to ensure it is the visual floor 
+-->
+<canvas #particleCanvas class="fixed top-0 left-0 w-full h-full z-0 bg-black"></canvas>
+
+<!-- Main Container 
+     Changed to z-10 relative to sit on top of the canvas
+-->
+<div class="relative z-10 min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden">
+  
+  <!-- Header: Floating above -->
+  <header class="absolute top-0 left-0 w-full p-8 flex justify-between items-start z-20 pointer-events-none">
+    <div class="pointer-events-auto">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="h-[2px] w-8 bg-amber-500 box-shadow-[0_0_10px_#f59e0b]"></div>
+        <h1 class="font-orbitron text-2xl font-bold tracking-[0.2em] text-white drop-shadow-md">
+          NEBULA
+        </h1>
+      </div>
+      <p class="text-[10px] font-rajdhani tracking-widest text-amber-500 uppercase ml-10 drop-shadow-sm">System V.2.5 // Online</p>
+    </div>
+    
+    <div class="hidden md:flex flex-col items-end gap-1 text-[10px] font-rajdhani tracking-widest text-white/70">
+      <div class="flex gap-2 bg-black/40 px-2 py-1 rounded border border-white/10">
+        <span>CPU: NORMAL</span>
+        <span class="text-amber-500">///</span>
+        <span>MEM: OPTIMAL</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Central Interaction Area -->
+  <main class="relative z-10 w-full max-w-xl flex flex-col items-center gap-12">
+    
+    <!-- Dynamic Status Text -->
+    <div class="text-center h-24 flex flex-col justify-end pb-4 filter drop-shadow-lg">
+      @if (isProcessing()) {
+        <h2 class="text-4xl md:text-5xl font-orbitron font-bold text-white animate-pulse tracking-widest">
+          PROCESSING
+        </h2>
+        <div class="flex items-center justify-center gap-2 mt-2">
+          <span class="text-amber-400 font-mono text-xl">{{ progress() }}%</span>
+          <div class="w-32 h-1 bg-black/50 rounded-full overflow-hidden border border-white/20">
+             <div class="h-full bg-amber-500 transition-all duration-100 shadow-[0_0_10px_#f59e0b]" [style.width.%]="progress()"></div>
+          </div>
+        </div>
+      } @else {
+        <h2 class="text-5xl md:text-6xl font-orbitron font-black text-white tracking-[0.1em] neon-text-gold">
+          TRANSMUTE
+        </h2>
+        <p class="text-white/80 font-rajdhani tracking-[0.5em] text-sm uppercase mt-2 drop-shadow-md">
+          Ready for Input
+        </p>
+      }
+    </div>
+
+    <!-- HUD Interface Card (No Blur, just tint and borders) -->
+    <div class="w-full hud-panel rounded-xl p-1 transition-all duration-500"
+         [class.translate-y-0]="!hasResult()"
+         [class.translate-y-4]="hasResult()">
+      
+      <div class="rounded-lg p-6 md:p-8 relative overflow-hidden bg-transparent">
+        
+        <!-- Corner Accents (HUD Style) -->
+        <div class="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber-500/80"></div>
+        <div class="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber-500/80"></div>
+        <div class="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber-500/80"></div>
+        <div class="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber-500/80"></div>
+
+        @if (!uploadedFile()) {
+          <!-- Upload State - Completely Transparent center -->
+          <div 
+            class="group flex flex-col items-center justify-center py-12 px-4 border border-dashed border-white/20 rounded hover:border-amber-500 hover:bg-black/20 transition-all cursor-pointer relative overflow-hidden"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+            (click)="fileInput.click()"
+          >
+             <!-- Subtle scanline effect on hover -->
+             <div class="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-700 pointer-events-none"></div>
+
+            <div class="relative w-16 h-16 mb-6 flex items-center justify-center">
+              <div class="absolute inset-0 border border-amber-500/30 rounded-full scale-100 group-hover:scale-125 transition-transform duration-500"></div>
+              <svg class="w-8 h-8 text-white group-hover:text-amber-400 transition-colors z-10 filter drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+              </svg>
+            </div>
+            <p class="font-orbitron text-lg text-white mb-2 drop-shadow-md">INITIALIZE UPLOAD</p>
+            <p class="font-rajdhani text-white/60 text-xs tracking-widest uppercase">
+              Drop Document or Click to Browse
+            </p>
+            <input #fileInput type="file" class="hidden" (change)="onFileSelected($event)" accept=".pdf,.txt,.jpg,.jpeg,.png,.md,.epub">
+          </div>
+        } @else {
+          <!-- File Loaded / Result State -->
+          <div class="animate-fade-in">
+             <!-- Header -->
+             <div class="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+               <div class="flex items-center gap-3">
+                  <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>
+                  <span class="font-mono text-sm text-white truncate max-w-[200px] drop-shadow-sm">{{ uploadedFile()?.name }}</span>
+               </div>
+               @if (!isProcessing() && !hasResult()) {
+                 <button (click)="reset()" class="text-xs text-red-400 hover:text-red-300 font-bold tracking-wider hover:underline">CANCEL</button>
+               }
+             </div>
+
+             @if (!hasResult()) {
+               <!-- Configuration -->
+               <div class="space-y-6">
+                  <div class="grid grid-cols-1">
+                    <label class="text-[10px] text-amber-500 uppercase tracking-widest mb-2 font-bold drop-shadow-sm">Target Format</label>
+                    <div class="flex gap-2 flex-wrap">
+                      @for (format of formats; track format) {
+                        <button 
+                          (click)="targetFormat.set(format)"
+                          class="px-4 py-2 text-xs font-orbitron border rounded transition-all backdrop-blur-0"
+                          [class.border-amber-500]="targetFormat() === format"
+                          [class.text-black]="targetFormat() === format"
+                          [class.bg-amber-500]="targetFormat() === format"
+                          [class.shadow-glow]="targetFormat() === format"
+                          [class.border-white-20]="targetFormat() !== format"
+                          [class.text-white]="targetFormat() !== format"
+                          [class.hover-bg-white-10]="targetFormat() !== format"
+                          [class.bg-black-40]="targetFormat() !== format"
+                          [disabled]="isProcessing()"
+                        >
+                          {{ format }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+
+                  @if (isProcessing()) {
+                    <div class="text-center py-4">
+                      <p class="text-amber-400 font-rajdhani animate-pulse tracking-widest text-sm drop-shadow">
+                        ANALYZING MOLECULAR STRUCTURE...
+                      </p>
+                    </div>
+                  } @else {
+                    <button 
+                      (click)="startConversion()"
+                      class="w-full py-4 mt-2 bg-white text-black font-bold font-orbitron tracking-[0.2em] rounded hover:bg-amber-400 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(251,191,36,0.6)]"
+                    >
+                      ENGAGE
+                    </button>
+                  }
+               </div>
+             } @else {
+               <!-- Result Output -->
+               <div class="flex flex-col h-[350px]">
+                 <!-- Preview Box: Needs some darkness (tint) to read text over stars, but NO blur -->
+                 <div class="flex-1 bg-black/60 rounded border border-white/20 p-4 mb-4 overflow-auto custom-scrollbar relative">
+                   <div class="absolute top-2 right-2 text-[10px] text-amber-500/50 font-mono">PREVIEW</div>
+                   <pre class="text-white/90 font-mono text-xs whitespace-pre-wrap font-thin leading-relaxed drop-shadow-sm">{{ convertedContent() }}</pre>
+                 </div>
+                 
+                 <div class="grid grid-cols-2 gap-4">
+                   <button (click)="downloadResult()" class="flex items-center justify-center gap-2 py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold font-orbitron tracking-widest rounded text-xs transition-colors shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4 4m4-4v12" />
+                     </svg>
+                     {{ downloadLabel() }}
+                   </button>
+                   <button (click)="reset()" class="py-3 border border-white/20 bg-black/40 hover:bg-white/10 text-white font-bold font-orbitron tracking-widest rounded text-xs transition-colors">
+                     RESET
+                   </button>
+                 </div>
+               </div>
+             }
+          </div>
+        }
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer Stats -->
+  <footer class="absolute bottom-6 w-full flex justify-center pointer-events-none z-10">
+    <div class="flex gap-8 text-[10px] text-white/40 font-rajdhani tracking-[0.2em] drop-shadow-md">
+      <span>LATENCY: 24MS</span>
+      <span>ENCRYPTION: AES-256</span>
+      <span>STATUS: CONNECTED</span>
+    </div>
+  </footer>
+
+</div>
